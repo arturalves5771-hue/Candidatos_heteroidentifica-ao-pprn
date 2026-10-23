@@ -3,76 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Candidatos - Heteroidentificação</title>
+    <title>Painel de Candidatos - PPRN</title>
     <style>
+        :root {
+            --primary-color: #2e7d32; /* Tom verde institucional */
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
         body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f4f4f9;
-            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
         }
         .container {
-            max-width: 800px;
-            margin: auto;
-            background: white;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+        /* Dashboard Cards */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: var(--card-bg);
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+            border-top: 4px solid var(--primary-color);
         }
-        pre {
-            background: #eee;
-            padding: 15px;
-            border-radius: 5px;
+        .card h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #666;
+        }
+        .card p {
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        /* Search Box */
+        .search-box {
+            margin-bottom: 20px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-box input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 5px rgba(46, 125, 50, 0.3);
+        }
+        /* Table Styling */
+        .table-container {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             overflow-x: auto;
-            max-height: 400px;
+            max-height: 500px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .badge-deferido {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .badge-outro {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        #status-msg {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+            margin-bottom: 15px;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>Dados de Candidatos - PPRN</h1>
-        <p id="status">Carregando dados do GitHub...</p>
-        
-        <pre><code id="conteudo-dados">Aguarde...</code></pre>
+        <header>
+            <h1>Painel de Candidatos - PPRN</h1>
+            <p>Consulta de Status de Heteroidentificação</p>
+        </header>
+
+        <!-- Dashboard / Cards de Resumo -->
+        <div class="dashboard">
+            <div class="card">
+                <h3>Total de Candidatos</h3>
+                <p id="total-candidatos">0</p>
+            </div>
+            <div class="card">
+                <h3>Deferidos</h3>
+                <p id="total-deferidos">0</p>
+            </div>
+            <div class="card">
+                <h3>Outros Status</h3>
+                <p id="total-outros">0</p>
+            </div>
+        </div>
+
+        <!-- Barra de Pesquisa -->
+        <div class="search-box">
+            <input type="text" id="input-busca" placeholder="Digite o nome do candidato para pesquisar..." onkeyup="filtrarCandidatos()">
+        </div>
+
+        <div id="status-msg">Carregando dados...</div>
+
+        <!-- Tabela de Dados -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Inscrição</th>
+                        <th>Status</th>
+                    </tr>
+                >
+                <tbody id="tabela-corpo">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        // Link direto Raw do seu arquivo dados.js no GitHub
+        let listaCandidatos = [];
+
+        // Link Raw do seu arquivo no GitHub
         const urlGitHub = "https://raw.githubusercontent.com/arturalves5771-hue/Candidatos_heteroidentifica-ao-pprn/main/dados.js";
 
         fetch(urlGitHub)
             .then(response => {
-                if (!response.ok) {
-                    throw new Error("Erro ao acessar o arquivo no GitHub.");
-                }
+                if (!response.ok) throw new Error("Erro ao carregar o arquivo do GitHub.");
                 return response.text();
             })
             .then(textoCodigo => {
-                // Cria um espaço seguro para executar o código do dados.js e extrair o array window.rawData
-                let rawData = [];
-                
-                // Simula a atribuição do window.rawData para capturar os dados
-                const window = {};
-                
-                // Executa o conteúdo do arquivo baixado
-                eval(textoCodigo);
+                let window = {};
+                eval(textoCodigo); // Executa o código para extrair o window.rawData
 
-                // Se a variável window.rawData existir agora, exibe ela
                 if (window.rawData && Array.isArray(window.rawData)) {
-                    document.getElementById("conteudo-dados").textContent = JSON.stringify(window.rawData, null, 2);
-                    document.getElementById("status").textContent = `Dados carregados com sucesso! Total de registros: ${window.rawData.length}`;
-                    document.getElementById("status").style.color = "green";
+                    listaCandidatos = window.rawData;
+                    
+                    // Atualiza o dashboard inicial
+                    atualizarDashboard(listaCandidatos);
+                    
+                    // Exibe todos na tabela inicialmente
+                    exibirTabela(listaCandidatos);
+                    
+                    document.getElementById("status-msg").textContent = `Exibindo ${listaCandidatos.length} registros.`;
                 } else {
-                    throw new Error("A variável window.rawData não foi encontrada dentro do arquivo.");
+                    throw new Error("A variável window.rawData não foi encontrada.");
                 }
             })
             .catch(erro => {
-                console.error("Erro:", erro);
-                document.getElementById("status").textContent = "Erro ao carregar os dados. Verifique o console.";
-                document.getElementById("status").style.color = "red";
-                document.getElementById("conteudo-dados").textContent = erro.message;
+                console.error(erro);
+                document.getElementById("status-msg").textContent = "Erro ao carregar os dados. Verifique a conexão.";
+                document.getElementById("status-msg").style.color = "red";
             });
+
+        function atualizarDashboard(dados) {
+            const total = dados.length;
+            const deferidos = dados.filter(c => c.status && c.status.toUpperCase() === "DEFERIDO").length;
+            const outros = total - deferidos;
+
+            document.getElementById("total-candidatos").textContent = total.toLocaleString('pt-BR');
+            document.getElementById("total-deferidos").textContent = deferidos.toLocaleString('pt-BR');
+            document.getElementById("total-outros").textContent = outros.toLocaleString('pt-BR');
+        }
+
+        function exibirTabela(dados) {
+            const corpo = document.getElementById("tabela-corpo");
+            corpo.innerHTML = "";
+
+            // Limita a exibição inicial para os primeiros 200 resultados se a lista for gigante (para não travar o navegador)
+            // A busca dinâmica mostrará o restante conforme o usuário digitar.
+            const dadosParaExibir = dados.slice(0, 200);
+
+            if (dadosParaExibir.length === 0) {
+                corpo.innerHTML = "<tr><td colspan='3' style='text-align:center;'>Nenhum candidato encontrado.</td></tr>";
+                return;
+            }
+
+            let html = "";
+            dadosParaExibir.forEach(candidato => {
+                const statusClass = (candidato.status && candidato.status.toUpperCase() === "DEFERIDO") ? "badge-deferido" : "badge-outro";
+                html += `
+                    <tr>
+                        <td>${candidato.name || "N/A"}</td>
+                        <td>${candidato.registration || "N/A"}</td>
+                        <td><span class="${statusClass}">${candidato.status || "N/A"}</span></td>
+                    </tr>
+                `;
+            });
+            corpo.innerHTML = html;
+        }
+
+        function filtrarCandidatos() {
+            const termo = document.getElementById("input-busca").value.toLowerCase();
+            
+            const filtrados = listaCandidatos.filter(candidato => {
+                const nome = candidato.name ? candidato.name.toLowerCase() : "";
+                const inscricao = candidato.registration ? candidato.registration.toLowerCase() : "";
+                return nome.includes(termo) || inscricao.includes(termo);
+            });
+
+            exibirTabela(filtrados);
+            document.getElementById("status-msg").textContent = `Mostrando ${filtrados.length} de ${listaCandidatos.length} registros encontrados.`;
+        }
     </script>
 
 </body>

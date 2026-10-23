@@ -436,18 +436,131 @@
 
         const urlGitHub = "https://raw.githubusercontent.com/arturalves5771-hue/Candidatos_heteroidentifica-ao-pprn/main/dados.js";
 
+        // Carrega o arquivo usando fetch e interpreta o formato window.rawData
         fetch(urlGitHub)
             .then(res => {
-                if (!res.ok) throw new Error("Erro no download dos dados");
+                if (!res.ok) throw new Error("Erro na requisição do arquivo");
                 return res.text();
             })
             .then(texto => {
-                let window = {};
-                eval(texto);
+                let rawData = [];
+                // Cria um objeto window isolado para capturar a variável global do seu arquivo .js
+                const window = {};
+                try {
+                    // Executa o conteúdo do arquivo de forma segura
+                    const scriptFunction = new Function('window', texto + '; return window.rawData;');
+                    rawData = scriptFunction(window);
+                } catch (e) {
+                    console.error("Erro ao processar o script:", e);
+                }
 
-                if (window.rawData && Array.isArray(window.rawData)) {
-                    todosCandidatos = window.rawData;
+                if (rawData && Array.isArray(rawData) && rawData.length > 0) {
+                    todosCandidatos = rawData;
                     
                     document.getElementById("top-status").innerHTML = '<span class="dot"></span> Dados Carregados com Sucesso';
                     
-                    calcularDashboard(todosCandid
+                    calcularDashboard(todosCandidatos);
+                    aplicarFiltros();
+                } else {
+                    throw new Error("A variável window.rawData está vazia ou não foi encontrada.");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById("top-status").innerHTML = '<span class="dot" style="background-color: #ef4444;"></span> Erro ao Carregar';
+                document.getElementById("top-status").style.backgroundColor = '#fef2f2';
+                document.getElementById("top-status").style.color = '#dc2626';
+                document.getElementById("tabela-corpo").innerHTML = `<tr><td colspan="3" style="text-align: center; color: #ef4444; padding: 40px;">Erro ao carregar os dados do GitHub. Verifique o console.</td></tr>`;
+            });
+
+        function calcularDashboard(dados) {
+            const total = dados.length;
+            const deferidos = dados.filter(c => c.status && c.status.toUpperCase() === "DEFERIDO").length;
+            const indeferidos = total - deferidos;
+
+            const percDef = total > 0 ? ((deferidos / total) * 100).toFixed(1) : "0.0";
+            const percIndef = total > 0 ? ((indeferidos / total) * 100).toFixed(1) : "0.0";
+
+            document.getElementById("qtd-total").textContent = total.toLocaleString('pt-BR');
+            document.getElementById("qtd-deferidos").textContent = deferidos.toLocaleString('pt-BR');
+            document.getElementById("qtd-indeferidos").textContent = indeferidos.toLocaleString('pt-BR');
+
+            document.getElementById("perc-deferidos").textContent = `${percDef}%`;
+            document.getElementById("perc-indeferidos").textContent = `${percIndef}%`;
+        }
+
+        function setFiltroStatus(status, btnElement) {
+            statusFiltroAtual = status;
+            
+            document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            let textoFiltro = "Todos";
+            if (status === 'DEFERIDO') textoFiltro = "Deferidos";
+            if (status === 'INDEFERIDO') textoFiltro = "Indeferidos";
+            
+            document.getElementById("info-filtro-atual").textContent = `Filtro: ${textoFiltro}`;
+
+            aplicarFiltros();
+        }
+
+        function aplicarFiltros() {
+            const busca = document.getElementById("input-busca").value.toLowerCase();
+
+            const filtrados = todosCandidatos.filter(item => {
+                const nome = item.name ? item.name.toLowerCase() : "";
+                const matricula = item.registration ? item.registration.toLowerCase() : "";
+                const status = item.status ? item.status.toUpperCase() : "";
+
+                const bateBusca = nome.includes(busca) || matricula.includes(busca);
+                
+                let bateStatus = true;
+                if (statusFiltroAtual === 'DEFERIDO') {
+                    bateStatus = (status === 'DEFERIDO');
+                } else if (statusFiltroAtual === 'INDEFERIDO') {
+                    bateStatus = (status !== 'DEFERIDO');
+                }
+
+                return bateBusca && bateStatus;
+            });
+
+            renderizarTabela(filtrados);
+        }
+
+        function renderizarTabela(dados) {
+            const corpo = document.getElementById("tabela-corpo");
+            corpo.innerHTML = "";
+
+            document.getElementById("info-exibicao").textContent = `Exibindo ${Math.min(dados.length, 100)} de ${dados.length} candidatos`;
+
+            if (dados.length === 0) {
+                corpo.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #94a3b8; padding: 40px;">Nenhum candidato encontrado com os filtros aplicados.</td></tr>`;
+                return;
+            }
+
+            const visiveis = dados.slice(0, 100);
+
+            let html = "";
+            visiveis.forEach(item => {
+                const isDeferido = item.status && item.status.toUpperCase() === "DEFERIDO";
+                const badgeClass = isDeferido ? "badge-deferido" : "badge-indeferido";
+                const badgeIcon = isDeferido ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-xmark"></i>';
+
+                html += `
+                    <tr>
+                        <td class="td-candidato">${item.name || "N/A"}</td>
+                        <td class="td-matricula">${item.registration || "N/A"}</td>
+                        <td>
+                            <span class="status-badge ${badgeClass}">
+                                ${badgeIcon} ${item.status || "N/A"}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            corpo.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

@@ -32,21 +32,21 @@
 
     <div class="container">
         <h1>Dados de Candidatos - PPRN</h1>
-        <p>Dados carregados do arquivo <code>dados.js</code>:</p>
+        <p>Dados carregados com sucesso do arquivo <code>dados.js</code>:</p>
         
         <pre><code id="conteudo-dados">Carregando dados...</code></pre>
     </div>
 
-    <!-- Importa o seu arquivo dados.js do GitHub (ou local) -->
+    <!-- Importa o arquivo dados.js diretamente do GitHub (link Raw) -->
     <script src="https://raw.githubusercontent.com/arturalves5771-hue/Candidatos_heteroidentifica-ao-pprn/main/dados.js"></script>
     
     <script>
-        // Aqui usamos a variável que está dentro do seu dados.js 
-        // (Substitua 'dadosCandidatos' pelo nome exato da variável que você criou lá dentro)
-        if (typeof dadosCandidatos !== 'undefined') {
-            document.getElementById("conteudo-dados").textContent = JSON.stringify(dadosCandidatos, null, 2);
+        // Verifica se a variável global window.rawData existe e a exibe na tela
+        if (typeof window.rawData !== 'undefined') {
+            // Mostra os dados formatados em JSON bonitinho na tela
+            document.getElementById("conteudo-dados").textContent = JSON.stringify(window.rawData, null, 2);
         } else {
-            document.getElementById("conteudo-dados").textContent = "Erro: A variável de dados não foi encontrada no arquivo.";
+            document.getElementById("conteudo-dados").textContent = "Erro: A variável 'window.rawData' não foi encontrada.";
         }
     </script>
 

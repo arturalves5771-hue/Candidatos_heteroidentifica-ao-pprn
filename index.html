@@ -32,22 +32,47 @@
 
     <div class="container">
         <h1>Dados de Candidatos - PPRN</h1>
-        <p>Dados carregados com sucesso do arquivo <code>dados.js</code>:</p>
+        <p id="status">Carregando dados do GitHub...</p>
         
-        <pre><code id="conteudo-dados">Carregando dados...</code></pre>
+        <pre><code id="conteudo-dados">Aguarde...</code></pre>
     </div>
 
-    <!-- Importa o arquivo dados.js diretamente do GitHub (link Raw) -->
-    <script src="https://raw.githubusercontent.com/arturalves5771-hue/Candidatos_heteroidentifica-ao-pprn/main/dados.js"></script>
-    
     <script>
-        // Verifica se a variável global window.rawData existe e a exibe na tela
-        if (typeof window.rawData !== 'undefined') {
-            // Mostra os dados formatados em JSON bonitinho na tela
-            document.getElementById("conteudo-dados").textContent = JSON.stringify(window.rawData, null, 2);
-        } else {
-            document.getElementById("conteudo-dados").textContent = "Erro: A variável 'window.rawData' não foi encontrada.";
-        }
+        // Link direto Raw do seu arquivo dados.js no GitHub
+        const urlGitHub = "https://raw.githubusercontent.com/arturalves5771-hue/Candidatos_heteroidentifica-ao-pprn/main/dados.js";
+
+        fetch(urlGitHub)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Erro ao acessar o arquivo no GitHub.");
+                }
+                return response.text();
+            })
+            .then(textoCodigo => {
+                // Cria um espaço seguro para executar o código do dados.js e extrair o array window.rawData
+                let rawData = [];
+                
+                // Simula a atribuição do window.rawData para capturar os dados
+                const window = {};
+                
+                // Executa o conteúdo do arquivo baixado
+                eval(textoCodigo);
+
+                // Se a variável window.rawData existir agora, exibe ela
+                if (window.rawData && Array.isArray(window.rawData)) {
+                    document.getElementById("conteudo-dados").textContent = JSON.stringify(window.rawData, null, 2);
+                    document.getElementById("status").textContent = `Dados carregados com sucesso! Total de registros: ${window.rawData.length}`;
+                    document.getElementById("status").style.color = "green";
+                } else {
+                    throw new Error("A variável window.rawData não foi encontrada dentro do arquivo.");
+                }
+            })
+            .catch(erro => {
+                console.error("Erro:", erro);
+                document.getElementById("status").textContent = "Erro ao carregar os dados. Verifique o console.";
+                document.getElementById("status").style.color = "red";
+                document.getElementById("conteudo-dados").textContent = erro.message;
+            });
     </script>
 
 </body>

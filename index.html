@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meus Dados do GitHub na Vercel</title>
+    <title>Candidatos - Heteroidentificação</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -26,44 +26,28 @@
             overflow-x: auto;
             max-height: 400px;
         }
-        .loading {
-            color: #666;
-            font-style: italic;
-        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>Dados do GitHub no Meu Site</h1>
-        <p>Abaixo estão os dados carregados diretamente do repositório:</p>
+        <h1>Dados de Candidatos - PPRN</h1>
+        <p>Dados carregados do arquivo <code>dados.js</code>:</p>
         
-        <div id="status" class="loading">Carregando dados...</div>
-        <pre><code id="conteudo-dados"></code></pre>
+        <pre><code id="conteudo-dados">Carregando dados...</code></pre>
     </div>
 
+    <!-- Importa o seu arquivo dados.js do GitHub (ou local) -->
+    <script src="https://raw.githubusercontent.com/arturalves5771-hue/Candidatos_heteroidentifica-ao-pprn/main/dados.js"></script>
+    
     <script>
-        // Substitua pelo link BRUTO (Raw) do seu arquivo no GitHub
-        const urlGitHub = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/SEU_ARQUIVO.csv";
-
-        fetch(urlGitHub)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Não foi possível carregar o arquivo. Verifique o link.");
-                }
-                return response.text();
-            })
-            .then(dados => {
-                // Exibe o conteúdo bruto do arquivo dentro da tag <pre>
-                document.getElementById("conteudo-dados").textContent = dados;
-                document.getElementById("status").textContent = "Dados carregados com sucesso!";
-                document.getElementById("status").style.color = "green";
-            })
-            .catch(erro => {
-                console.error("Erro:", erro);
-                document.getElementById("status").textContent = "Erro ao carregar os dados. Verifique o console.";
-                document.getElementById("status").style.color = "red";
-            });
+        // Aqui usamos a variável que está dentro do seu dados.js 
+        // (Substitua 'dadosCandidatos' pelo nome exato da variável que você criou lá dentro)
+        if (typeof dadosCandidatos !== 'undefined') {
+            document.getElementById("conteudo-dados").textContent = JSON.stringify(dadosCandidatos, null, 2);
+        } else {
+            document.getElementById("conteudo-dados").textContent = "Erro: A variável de dados não foi encontrada no arquivo.";
+        }
     </script>
 
 </body>

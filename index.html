@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Consulta de Candidatos</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- PapaParse CDN para leitura robusta de CSV via URL -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .highlight {
+            background-color: #fef08a;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-user-graduate text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900 leading-tight">Portal de Inscrições</h1>
+                    <p class="text-xs text-slate-500">Consulta de Status e Homologação de Candidatos</p>
+                </div>
+            </div>
+            <div id="status-badge" class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                Carregando Google Planilhas...
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- Metrics Dashboard / Cards -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Total Candidates Card -->
+            <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total de Candidatos</p>
+                        <h2 id="total-percent" class="text-3xl font-extrabold text-slate-900 mt-1">100%</h2>
+                    </div>
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                        <i class="fa-solid fa-users text-xl"></i>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-sm pt-2 border-t border-slate-100">
+                    <span class="text-slate-500">Quantidade cadastrada:</span>
+                    <span id="total-count" class="font-bold text-slate-800 text-base">0</span>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 h-1 bg-blue-500"></div>
+            </div>
+
+            <!-- Approved Candidates Card -->
+            <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Inscrições Deferidas</p>
+                        <h2 id="approved-percent" class="text-3xl font-extrabold text-emerald-600 mt-1">0%</h2>
+                    </div>
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <i class="fa-solid fa-circle-check text-xl"></i>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-sm pt-2 border-t border-slate-100">
+                    <span class="text-slate-500">Total deferidos:</span>
+                    <span id="approved-count" class="font-bold text-emerald-700 text-base">0</span>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500"></div>
+            </div>
+
+            <!-- Rejected Candidates Card -->
+            <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-xs font-semibold text-rose-600 uppercase tracking-wider">Inscrições Indeferidas</p>
+                        <h2 id="rejected-percent" class="text-3xl font-extrabold text-rose-600 mt-1">0%</h2>
+                    </div>
+                    <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
+                        <i class="fa-solid fa-circle-xmark text-xl"></i>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-sm pt-2 border-t border-slate-100">
+                    <span class="text-slate-500">Total indeferidos:</span>
+                    <span id="rejected-count" class="font-bold text-rose-700 text-base">0</span>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 h-1 bg-rose-500"></div>
+            </div>
+        </section>
+
+        <!-- Search & Filter Controls -->
+        <section class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+            <div class="flex flex-col md:flex-row gap-4 justify-between items-center">
+                <!-- Search Box -->
+                <div class="relative w-full md:w-96">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="Buscar por nome ou matrícula..." 
+                        class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    >
+                    <button id="clear-search" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Status Filters Buttons -->
+                <div class="flex w-full md:w-auto bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1">
+                    <button data-filter="ALL" class="filter-btn active-filter flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-slate-800 shadow-sm">
+                        Todos
+                    </button>
+                    <button data-filter="DEFERIDO" class="filter-btn flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-emerald-700 transition-all">
+                        Deferidos
+                    </button>
+                    <button data-filter="INDEFERIDO" class="filter-btn flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-rose-700 transition-all">
+                        Indeferidos
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Counter Bar -->
+            <div class="flex justify-between items-center pt-2 text-xs text-slate-500 border-t border-slate-100">
+                <div>
+                    Exibindo <span id="displayed-count" class="font-bold text-slate-800">0</span> de <span id="total-candidates" class="font-bold text-slate-800">0</span> candidatos
+                </div>
+                <div id="active-filter-label" class="font-medium text-slate-400">
+                    Filtro: Todos
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Table -->
+        <section class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            <th class="py-4 px-6">Candidato</th>
+                            <th class="py-4 px-6">Matrícula</th>
+                            <th class="py-4 px-6 text-center">Status da Inscrição</th>
+                        </tr>
+                    </thead>
+                    <tbody id="candidates-table-body" class="divide-y divide-slate-100 text-sm">
+                        <!-- Dynamic Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-state" class="py-12 text-center space-y-3">
+                <div class="inline-flex p-4 text-blue-600 rounded-full animate-spin">
+                    <i class="fa-solid fa-circle-notch text-3xl"></i>
+                </div>
+                <h3 class="text-base font-semibold text-slate-800">Carregando dados diretamente da Planilha...</h3>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto">Sincronizando com o Google Drive/Planilhas.</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="no-results" class="hidden py-12 text-center space-y-3">
+                <div class="inline-flex p-4 bg-slate-100 text-slate-400 rounded-full">
+                    <i class="fa-solid fa-user-slash text-3xl"></i>
+                </div>
+                <h3 class="text-base font-semibold text-slate-800">Nenhum candidato encontrado</h3>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto">Não encontramos nenhum registro correspondente aos termos digitados ou aos filtros selecionados.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Link da sua planilha do Google publicada como CSV
+        const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTO2GhZ_-FN6PCbZbs1l4u3oAPozLiFjJ5wsNpW3PRPigjEyk6Tt0ypLuvjsVyoVg/pub?output=csv";
+
+        // Variáveis de estado global
+        let rawData = [];
+        let currentFilter = "ALL";
+        let currentSearchQuery = "";
+
+        // Elementos do DOM
+        const tableBody = document.getElementById("candidates-table-body");
+        const searchInput = document.getElementById("search-input");
+        const clearSearchBtn = document.getElementById("clear-search");
+        const filterButtons = document.querySelectorAll(".filter-btn");
+        const noResults = document.getElementById("no-results");
+        const loadingState = document.getElementById("loading-state");
+        const statusBadge = document.getElementById("status-badge");
+
+        // Elementos de métricas
+        const totalCountEl = document.getElementById("total-count");
+        const totalCandidatesEl = document.getElementById("total-candidates");
+        const approvedCountEl = document.getElementById("approved-count");
+        const approvedPercentEl = document.getElementById("approved-percent");
+        const rejectedCountEl = document.getElementById("rejected-count");
+        const rejectedPercentEl = document.getElementById("rejected-percent");
+        const displayedCountEl = document.getElementById("displayed-count");
+        const activeFilterLabel = document.getElementById("active-filter-label");
+
+        // Função para carregar os dados via PapaParse
+        function loadGoogleSheetData() {
+            // Se estiver abrindo como arquivo local direto (file://), podemos avisar o usuário
+            if (window.location.protocol === 'file:') {
+                console.warn("Aviso: Para ler links externos sem bloqueios de CORS, o arquivo deve ser rodado num servidor web (como Live Server, Vercel, Netlify, GitHub Pages) ou acessado via http://localhost.");
+            }
+
+            Papa.parse(GOOGLE_SHEET_CSV_URL, {
+                download: true,
+                header: false,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const rows = results.data;
+                    
+                    if (!rows || rows.length <= 1) {
+                        showError("Planilha vazia ou sem dados válidos.");
+                        return;
+                    }
+
+                    // Processar linhas pulando o cabeçalho
+                    rawData = [];
+                    for (let i = 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        const name = row[0] ? String(row[0]).trim() : "";
+                        const registration = row[1] ? String(row[1]).trim() : "";
+                        const status = row[2] ? String(row[2]).trim().toUpperCase() : "";
+
+                        if (name || registration) {
+                            rawData.push({ name, registration, status });
+                        }
+                    }
+
+                    // Atualizar Interface
+                    loadingState.classList.add("hidden");
+                    statusBadge.innerHTML = `
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Conectado ao Google Planilhas (${rawData.length} registros)
+                    `;
+
+                    updateMetrics();
+                    renderTable();
+                },
+                error: function(err) {
+                    console.error("Erro no PapaParse:", err);
+                    showError("Não foi possível carregar os dados. Verifique a conexão.");
+                }
+            });
+        }
+
+        function showError(message) {
+            loadingState.innerHTML = `
+                <div class="text-rose-500 font-semibold p-4">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
+                    <p>${message}</p>
+                    <p class="text-xs text-slate-500 font-normal mt-2">Dica: Se você estiver abrindo o arquivo dando 2 cliques (file://), o navegador pode bloquear a conexão por segurança. Publique o HTML no GitHub Pages, Vercel ou rode via Live Server.</p>
+                </div>
+            `;
+            statusBadge.innerHTML = `
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                Erro ao conectar
+            `;
+        }
+
+        // Função de busca sem acentos
+        function normalizeString(str) {
+            return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+        }
+
+        // Atualizar Métricas
+        function updateMetrics() {
+            const total = rawData.length;
+            const approved = rawData.filter(c => c.status.includes("DEFERIDO") && !c.status.includes("INDEFERIDO")).length;
+            const rejected = rawData.filter(c => c.status.includes("INDEFERIDO")).length;
+
+            const approvedPercentage = total > 0 ? ((approved / total) * 100).toFixed(1) : "0";
+            const rejectedPercentage = total > 0 ? ((rejected / total) * 100).toFixed(1) : "0";
+
+            totalCountEl.textContent = total.toLocaleString('pt-BR');
+            totalCandidatesEl.textContent = total.toLocaleString('pt-BR');
+            approvedCountEl.textContent = approved.toLocaleString('pt-BR');
+            approvedPercentEl.textContent = `${approvedPercentage}%`;
+            rejectedCountEl.textContent = rejected.toLocaleString('pt-BR');
+            rejectedPercentEl.textContent = `${rejectedPercentage}%`;
+        }
+
+        // Destaque na busca
+        function highlightMatch(text, query) {
+            if (!query || !text) return text;
+            const normalizedText = normalizeString(text);
+            const normalizedQuery = normalizeString(query);
+            const startIndex = normalizedText.indexOf(normalizedQuery);
+            
+            if (startIndex === -1) return text;
+
+            const endIndex = startIndex + query.length;
+            const originalMatch = text.substring(startIndex, endIndex);
+
+            return text.substring(0, startIndex) + `<mark class="highlight">${originalMatch}</mark>` + text.substring(endIndex);
+        }
+
+        // Renderizar Tabela
+        function renderTable() {
+            const query = currentSearchQuery.trim();
+            const normalizedQuery = normalizeString(query);
+
+            const filteredData = rawData.filter(item => {
+                const isApproved = item.status.includes("DEFERIDO") && !item.status.includes("INDEFERIDO");
+                const isRejected = item.status.includes("INDEFERIDO");
+
+                let matchesStatus = true;
+                if (currentFilter === "DEFERIDO") matchesStatus = isApproved;
+                if (currentFilter === "INDEFERIDO") matchesStatus = isRejected;
+
+                const matchesSearch = !query || 
+                    normalizeString(item.name).includes(normalizedQuery) || 
+                    item.registration.includes(query);
+
+                return matchesStatus && matchesSearch;
+            });
+
+            displayedCountEl.textContent = filteredData.length.toLocaleString('pt-BR');
+
+            if (filteredData.length === 0) {
+                tableBody.innerHTML = "";
+                noResults.classList.remove("hidden");
+                return;
+            } else {
+                noResults.classList.add("hidden");
+            }
+
+            // Renderizar até 200 itens por vez para garantir super velocidade na rolagem
+            const renderLimit = 200;
+            const limitedData = filteredData.slice(0, renderLimit);
+
+            tableBody.innerHTML = limitedData.map(item => {
+                const highlightedName = highlightMatch(item.name, query);
+                const highlightedReg = highlightMatch(item.registration, query);
+                const isApproved = item.status.includes("DEFERIDO") && !item.status.includes("INDEFERIDO");
+
+                const statusBadge = isApproved
+                    ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                         <i class="fa-solid fa-circle-check text-xs"></i> Deferido
+                       </span>`
+                    : `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">
+                         <i class="fa-solid fa-circle-xmark text-xs"></i> Indeferido
+                       </span>`;
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="py-4 px-6 font-medium text-slate-800">
+                            ${highlightedName}
+                        </td>
+                        <td class="py-4 px-6 text-slate-500 font-mono text-xs">
+                            ${highlightedReg}
+                        </td>
+                        <td class="py-4 px-6 text-center">
+                            ${statusBadge}
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        // Listeners de Eventos
+        searchInput.addEventListener("input", (e) => {
+            currentSearchQuery = e.target.value;
+            clearSearchBtn.classList.toggle("hidden", !currentSearchQuery);
+            renderTable();
+        });
+
+        clearSearchBtn.addEventListener("click", () => {
+            searchInput.value = "";
+            currentSearchQuery = "";
+            clearSearchBtn.classList.add("hidden");
+            searchInput.focus();
+            renderTable();
+        });
+
+        filterButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                filterButtons.forEach(b => {
+                    b.classList.remove("bg-white", "text-slate-800", "shadow-sm", "active-filter");
+                    b.classList.add("text-slate-600");
+                });
+                btn.classList.add("bg-white", "text-slate-800", "shadow-sm", "active-filter");
+                btn.classList.remove("text-slate-600");
+
+                currentFilter = btn.dataset.filter;
+                activeFilterLabel.textContent = `Filtro: ${btn.textContent.trim()}`;
+                
+                renderTable();
+            });
+        });
+
+        // Iniciar
+        document.addEventListener("DOMContentLoaded", () => {
+            loadGoogleSheetData();
+        });
+    </script>
+</body>
+</html>
